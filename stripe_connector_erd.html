@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stripe Connector — Source Parity ERD</title>
+<style>
+:root{--bg:#f8fafc;--surface:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--xs:#94a3b8;
+--green:#16a34a;--green-bg:#dcfce7;--yellow:#ca8a04;--yellow-bg:#fef9c3;--red:#dc2626;--red-bg:#fee2e2;
+--p1:#dc2626;--p2:#ea580c;--p3:#ca8a04;--p4:#2563eb;--p5:#64748b;
+--card-w:210px;--radius:8px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+
+/* HEADER */
+#hdr{position:sticky;top:0;z-index:200;background:#0f172a;color:#f1f5f9;padding:10px 20px;
+  display:flex;align-items:center;gap:12px;border-bottom:1px solid #1e293b;}
+#hdr h1{font-size:14px;font-weight:700;white-space:nowrap;}
+#hdr .epic{font-size:11px;color:#64748b;text-decoration:none;}
+#hdr .epic:hover{color:#94a3b8;}
+.hstats{margin-left:auto;display:flex;gap:14px;font-size:11px;color:#64748b;}
+.hstat{display:flex;align-items:center;gap:4px;}
+.sdot{width:7px;height:7px;border-radius:50%;}
+.sdot.supported{background:#22c55e;}.sdot.partial{background:#eab308;}.sdot.missing{background:#ef4444;}
+
+/* FILTER BAR */
+#fbar{position:sticky;top:41px;z-index:199;background:#fff;border-bottom:1px solid var(--border);
+  padding:7px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.fg{display:flex;align-items:center;gap:5px;}
+.flabel{font-size:10px;font-weight:700;color:var(--xs);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;border:1px solid var(--border);
+  font-size:11px;cursor:pointer;user-select:none;background:#fff;color:var(--muted);transition:all .12s;white-space:nowrap;}
+.pill:hover{background:var(--bg);}
+.pill.on{border-color:transparent;color:#fff;}
+.pill.on.s-supported{background:#16a34a;}.pill.on.s-partial{background:#ca8a04;}.pill.on.s-missing{background:#dc2626;}
+.pill.on.p-pill{background:#334155;}.pill.on.d-pill{background:#4f46e5;}
+.pill.d-pill{border-left-width:3px;}
+#srch{margin-left:auto;padding:4px 10px;border:1px solid var(--border);border-radius:6px;
+  font-size:12px;width:180px;outline:none;}
+#srch:focus{border-color:#6366f1;box-shadow:0 0 0 2px #e0e7ff;}
+#fcnt{font-size:11px;color:var(--xs);white-space:nowrap;}
+
+/* DOMAIN FILTER ROW */
+#drow{background:#f8fafc;border-bottom:1px solid var(--border);padding:5px 20px;
+  display:flex;align-items:center;gap:6px;overflow-x:auto;flex-shrink:0;}
+#drow::-webkit-scrollbar{height:4px;}
+#drow::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:2px;}
+
+/* MAIN */
+#main{padding:16px 20px;display:flex;flex-direction:column;gap:20px;}
+
+/* DOMAIN SECTION */
+.dsec{}
+.dsec.hidden{display:none;}
+.dsec.collapsed .dcards{display:none;}
+.dhdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;user-select:none;padding:0 2px;}
+.dbar{width:4px;height:18px;border-radius:2px;flex-shrink:0;}
+.dname{font-size:13px;font-weight:700;letter-spacing:-.01em;}
+.dcnt{font-size:11px;color:var(--xs);}
+.dnn{font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;background:#ede9fe;color:#7c3aed;}
+.dchev{margin-left:auto;font-size:10px;color:var(--xs);}
+.dcards{display:flex;flex-wrap:wrap;gap:9px;}
+
+/* TABLE CARD */
+.tcard{width:var(--card-w);background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:border-color .12s,box-shadow .12s,opacity .12s;position:relative;}
+.tcard:hover{border-color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.tcard.hidden{display:none;}
+.tcard.dimmed{opacity:.25;}
+.tcard.fk-out{border-color:#0d9488!important;box-shadow:0 0 0 2px #ccfbf1;}
+.tcard.fk-in{border-color:#7c3aed!important;box-shadow:0 0 0 2px #ede9fe;}
+.tcard.focused{border-color:#0f172a!important;box-shadow:0 0 0 2px #cbd5e1;}
+
+.ctop{padding:7px 9px 5px;display:flex;align-items:flex-start;gap:5px;border-bottom:1px solid #f1f5f9;}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.cdot.supported{background:#22c55e;}.cdot.partial{background:#eab308;}.cdot.missing{background:#ef4444;}
+.cname{font-size:11px;font-weight:700;flex:1;line-height:1.3;word-break:break-word;}
+.pbadge{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;color:#fff;flex-shrink:0;letter-spacing:.02em;}
+.pbadge.done{background:#e2e8f0;color:#64748b;}.pbadge.P1{background:var(--p1);}.pbadge.P2{background:var(--p2);}
+.pbadge.P3{background:var(--p3);}.pbadge.P4{background:var(--p4);}.pbadge.P5{background:var(--p5);}
+
+.cpath{padding:2px 9px 4px;font-size:9px;color:var(--xs);font-family:'SF Mono','Fira Code',monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.clinx{padding:3px 9px 5px;display:flex;gap:5px;align-items:center;border-bottom:1px solid #f1f5f9;}
+.lbtn{font-size:10px;text-decoration:none;padding:2px 6px;border-radius:4px;border:1px solid var(--border);
+  display:inline-flex;align-items:center;gap:2px;transition:background .1s;color:var(--muted);}
+.lbtn:hover{background:var(--bg);}
+.lbtn.api{color:#0284c7;border-color:#bae6fd;}
+.lbtn.jira{color:#0052cc;border-color:#bfdbfe;}
+
+/* Expanded columns */
+.ccols{display:none;border-top:1px solid var(--border);padding:3px 0;}
+.tcard.expanded .ccols{display:block;}
+.crow{display:flex;align-items:center;padding:2px 9px;font-size:9.5px;}
+.ckey{width:38px;flex-shrink:0;font-size:8.5px;font-weight:700;text-transform:uppercase;color:#94a3b8;}
+.ckey.pk{color:#1e293b;}.ckey.fk{color:#7c3aed;}.ckey.pkfk{color:#0d9488;}
+.ccolname{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ctype{font-size:8.5px;color:var(--xs);font-style:italic;margin-left:3px;white-space:nowrap;}
+.csep{height:1px;background:var(--border);margin:3px 0;}
+
+/* FK info (expanded) */
+.cfkinfo{display:none;border-top:1px solid var(--border);padding:5px 9px;font-size:9.5px;}
+.tcard.expanded .cfkinfo{display:block;}
+.fkrow{display:flex;gap:4px;margin-bottom:3px;align-items:flex-start;}
+.fkdir{font-size:8.5px;font-weight:700;color:var(--xs);text-transform:uppercase;white-space:nowrap;padding-top:2px;width:36px;flex-shrink:0;}
+.fkchips{display:flex;flex-wrap:wrap;gap:2px;}
+.fkchip{font-size:9px;padding:1px 5px;border-radius:3px;background:#f1f5f9;color:#475569;cursor:pointer;
+  border:1px solid #e2e8f0;transition:background .1s;}
+.fkchip:hover{background:#e2e8f0;}
+.fknone{font-size:9px;color:var(--xs);}
+
+/* FK SVG OVERLAY */
+#fksvg{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:300;}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>Stripe Connector — Source Parity ERD</h1>
+  <a href="https://fivetran.atlassian.net/browse/RD-1228273" class="epic" target="_blank">Epic RD-1228273 ↗</a>
+  <div class="hstats">
+    <div class="hstat"><span class="sdot supported"></span><span id="ns">0</span> supported</div>
+    <div class="hstat"><span class="sdot partial"></span><span id="np">0</span> partial</div>
+    <div class="hstat"><span class="sdot missing"></span><span id="nm">0</span> missing</div>
+    <div class="hstat" style="color:#e2e8f0;font-weight:600"><span id="nt">0</span> total</div>
+  </div>
+</div>
+
+<div id="fbar">
+  <div class="fg">
+    <span class="flabel">Status</span>
+    <div class="pill on s-supported" data-ft="status" data-fv="supported">● Supported</div>
+    <div class="pill on s-partial" data-ft="status" data-fv="partial">● Partial</div>
+    <div class="pill on s-missing" data-ft="status" data-fv="missing">● Missing</div>
+  </div>
+  <div class="fg">
+    <span class="flabel">Priority</span>
+    <div class="pill on p-pill" data-ft="priority" data-fv="P1">P1</div>
+    <div class="pill on p-pill" data-ft="priority" data-fv="P2">P2</div>
+    <div class="pill on p-pill" data-ft="priority" data-fv="P3">P3</div>
+    <div class="pill on p-pill" data-ft="priority" data-fv="P4">P4</div>
+    <div class="pill on p-pill" data-ft="priority" data-fv="done">Done</div>
+  </div>
+  <input type="text" id="srch" placeholder="Search tables, tickets…">
+  <div id="fcnt"></div>
+</div>
+
+<div id="drow">
+  <span class="flabel" style="flex-shrink:0">Domains</span>
+</div>
+
+<div id="main"></div>
+<svg id="fksvg"></svg>
+
+<script>
+const DC={
+  "Core Resources":        {color:"#4f46e5",order:0},
+  "Payment Methods":       {color:"#7c3aed",order:1},
+  "Products":              {color:"#0284c7",order:2},
+  "Checkout":              {color:"#0891b2",order:3},
+  "Payment Links":         {color:"#0d9488",order:4},
+  "Billing":               {color:"#16a34a",order:5},
+  "Capital":               {color:"#65a30d",order:6},
+  "Connect":               {color:"#d97706",order:7},
+  "Radar":                 {color:"#dc2626",order:8},
+  "Issuing":               {color:"#db2777",order:9},
+  "Terminal":              {color:"#475569",order:10},
+  "Treasury":              {color:"#2563eb",order:11},
+  "Entitlements":          {color:"#9333ea",order:12},
+  "Financial Connections": {color:"#059669",order:13},
+  "Tax":                   {color:"#ea580c",order:14},
+};
+
+// cols: [name, key, type]  key: PK|FK|PK,FK|null
+// fkTo: tables this table references
+const T=[
+  // CORE RESOURCES
+  {id:"CUSTOMER",s:"partial",p:"P4",d:"Core Resources",tickets:[],api:"/v1/customers",
+   cols:[["id","PK","str"],["currency",null,"str"],["delinquent",null,"bool"],["email",null,"str"],["name",null,"str"]],fkTo:[]},
+  {id:"CHARGE",s:"partial",p:"P2",d:"Core Resources",tickets:["RD-896641","RD-1037870"],api:"/v1/charges",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["payment_intent_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"],["created",null,"ts"]],fkTo:["CUSTOMER","PAYMENT_INTENT"]},
+  {id:"PAYMENT_INTENT",s:"partial",p:"P3",d:"Core Resources",tickets:["RD-725319"],api:"/v1/payment_intents",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"],["created",null,"ts"]],fkTo:["CUSTOMER"]},
+  {id:"SETUP_INTENT",s:"supported",p:"P3",d:"Core Resources",tickets:["RD-1224930"],api:"/v1/setup_intents",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["payment_method_id","FK","str"],["status",null,"str"],["created",null,"ts"]],fkTo:["CUSTOMER","PAYMENT_METHOD"]},
+  {id:"SETUP_ATTEMPT",s:"supported",p:"done",d:"Core Resources",tickets:[],api:"/v1/setup_attempts",
+   cols:[["id","PK","str"],["setup_intent_id","FK","str"],["status",null,"str"],["created",null,"ts"]],fkTo:["SETUP_INTENT"]},
+  {id:"BALANCE_TRANSACTION",s:"supported",p:"done",d:"Core Resources",tickets:[],api:"/v1/balance_transactions",
+   cols:[["id","PK","str"],["source_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["fee",null,"int"],["net",null,"int"],["type",null,"str"]],fkTo:[]},
+  {id:"REFUND",s:"partial",p:"P4",d:"Core Resources",tickets:[],api:"/v1/refunds",
+   cols:[["id","PK","str"],["charge_id","FK","str"],["payment_intent_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["CHARGE","PAYMENT_INTENT"]},
+  {id:"DISPUTE",s:"partial",p:"P2",d:"Core Resources",tickets:[],api:"/v1/disputes",
+   cols:[["id","PK","str"],["charge_id","FK","str"],["payment_intent_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["CHARGE","PAYMENT_INTENT"]},
+  {id:"PAYOUT",s:"supported",p:"done",d:"Core Resources",tickets:[],api:"/v1/payouts",
+   cols:[["id","PK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"],["arrival_date",null,"ts"]],fkTo:[]},
+  {id:"FILE",s:"supported",p:"done",d:"Core Resources",tickets:[],api:"/v1/files",
+   cols:[["id","PK","str"],["filename",null,"str"],["purpose",null,"str"],["size",null,"int"],["created",null,"ts"]],fkTo:[]},
+  {id:"FILE_LINK",s:"supported",p:"done",d:"Core Resources",tickets:[],api:"/v1/file_links",
+   cols:[["id","PK","str"],["file_id","FK","str"],["expires_at",null,"ts"],["url",null,"str"]],fkTo:["FILE"]},
+
+  // PAYMENT METHODS
+  {id:"PAYMENT_METHOD",s:"partial",p:"P1",d:"Payment Methods",tickets:["RD-250544"],api:"/v1/payment_methods",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["billing_details_*",null,"str"],["created",null,"ts"],["type",null,"str"]],fkTo:["CUSTOMER"]},
+  {id:"CARD",s:"supported",p:"done",d:"Payment Methods",tickets:[],api:"/v1/customers/:id/sources",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["brand",null,"str"],["exp_month",null,"int"],["exp_year",null,"int"],["last4",null,"str"]],fkTo:["CUSTOMER"]},
+  {id:"BANK_ACCOUNT",s:"supported",p:"done",d:"Payment Methods",tickets:[],api:"/v1/customers/:id/sources",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["bank_name",null,"str"],["currency",null,"str"],["last4",null,"str"]],fkTo:["CUSTOMER"]},
+  {id:"CASH_BALANCE",s:"supported",p:"done",d:"Payment Methods",tickets:["RD-1024408"],api:"/v1/customers/:id/cash_balance",
+   cols:[["customer_id","PK","str"],["available_*",null,"int"],["livemode",null,"bool"]],fkTo:["CUSTOMER"]},
+  {id:"CASH_BALANCE_TRANSACTION",s:"supported",p:"done",d:"Payment Methods",tickets:["RD-1024408"],api:"/v1/customers/:id/cash_balance_transactions",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["type",null,"str"],["created",null,"ts"]],fkTo:["CUSTOMER"]},
+
+  // PRODUCTS
+  {id:"PRODUCT",s:"partial",p:"P2",d:"Products",tickets:[],api:"/v1/products",
+   cols:[["id","PK","str"],["default_price_id","FK","str"],["active",null,"bool"],["description",null,"str"],["name",null,"str"]],fkTo:["PRICE"]},
+  {id:"PRICE",s:"partial",p:"P3",d:"Products",tickets:["RD-725319","RD-1037145"],api:"/v1/prices",
+   cols:[["id","PK","str"],["product_id","FK","str"],["active",null,"bool"],["currency",null,"str"],["type",null,"str"],["unit_amount",null,"int"]],fkTo:["PRODUCT"]},
+  {id:"COUPON",s:"supported",p:"done",d:"Products",tickets:[],api:"/v1/coupons",
+   cols:[["id","PK","str"],["amount_off",null,"int"],["duration",null,"str"],["percent_off",null,"dec"]],fkTo:[]},
+  {id:"PROMOTION_CODE",s:"supported",p:"done",d:"Products",tickets:[],api:"/v1/promotion_codes",
+   cols:[["id","PK","str"],["coupon_id","FK","str"],["active",null,"bool"],["code",null,"str"]],fkTo:["COUPON"]},
+  {id:"TAX_RATE",s:"supported",p:"done",d:"Products",tickets:[],api:"/v1/tax_rates",
+   cols:[["id","PK","str"],["active",null,"bool"],["display_name",null,"str"],["percentage",null,"dec"]],fkTo:[]},
+  {id:"SHIPPING_RATE",s:"supported",p:"done",d:"Products",tickets:[],api:"/v1/shipping_rates",
+   cols:[["id","PK","str"],["active",null,"bool"],["display_name",null,"str"],["type",null,"str"]],fkTo:[]},
+  {id:"TAX_CODE",s:"missing",p:"P3",d:"Products",tickets:[],api:"/v1/tax_codes",
+   cols:[["id","PK","str"],["description",null,"str"],["name",null,"str"]],fkTo:[]},
+
+  // CHECKOUT
+  {id:"CHECKOUT_SESSION",s:"partial",p:"P3",d:"Checkout",tickets:["RD-601100"],api:"/v1/checkout/sessions",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["payment_intent_id","FK","str"],["subscription_id","FK","str"],["currency",null,"str"],["payment_status",null,"str"],["status",null,"str"]],fkTo:["CUSTOMER","PAYMENT_INTENT","SUBSCRIPTION"]},
+
+  // PAYMENT LINKS
+  {id:"PAYMENT_LINK",s:"missing",p:"P1",d:"Payment Links",tickets:["RD-1191718"],api:"/v1/payment_links",
+   cols:[["id","PK","str"],["active",null,"bool"],["currency",null,"str"],["url",null,"str"]],fkTo:[]},
+  {id:"PAYMENT_LINK_LINE_ITEM",s:"missing",p:"P1",d:"Payment Links",tickets:["RD-1191718"],api:"/v1/payment_links/:id/line_items",
+   cols:[["payment_link_id","PK,FK","str"],["index","PK","int"],["price_id","FK","str"],["quantity",null,"int"]],fkTo:["PAYMENT_LINK","PRICE"]},
+
+  // BILLING
+  {id:"SUBSCRIPTION",s:"partial",p:"P3",d:"Billing",tickets:["RD-795278","RD-957471"],api:"/v1/subscriptions",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["plan_id","FK","str"],["currency",null,"str"],["current_period_end",null,"ts"],["current_period_start",null,"ts"],["status",null,"str"]],fkTo:["CUSTOMER","PLAN"]},
+  {id:"SUBSCRIPTION_ITEM",s:"supported",p:"P3",d:"Billing",tickets:["RD-700329"],api:"/v1/subscription_items",
+   cols:[["id","PK","str"],["subscription_id","FK","str"],["price_id","FK","str"],["quantity",null,"int"],["created",null,"ts"]],fkTo:["SUBSCRIPTION","PRICE"]},
+  {id:"SUBSCRIPTION_SCHEDULE",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/subscription_schedules",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["subscription_id","FK","str"],["status",null,"str"],["created",null,"ts"]],fkTo:["CUSTOMER","SUBSCRIPTION"]},
+  {id:"PLAN",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/plans",
+   cols:[["id","PK","str"],["product_id","FK","str"],["active",null,"bool"],["currency",null,"str"],["interval",null,"str"]],fkTo:["PRODUCT"]},
+  {id:"QUOTE",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/quotes",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["subscription_id","FK","str"],["currency",null,"str"],["status",null,"str"]],fkTo:["CUSTOMER","SUBSCRIPTION"]},
+  {id:"TAX_ID",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/tax_ids",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["type",null,"str"],["value",null,"str"]],fkTo:["CUSTOMER"]},
+  {id:"INVOICE",s:"partial",p:"P3",d:"Billing",tickets:["RD-576749","RD-910919"],api:"/v1/invoices",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["subscription_id","FK","str"],["amount_due",null,"int"],["amount_paid",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["CUSTOMER","SUBSCRIPTION"]},
+  {id:"INVOICE_ITEM",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/invoiceitems",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["invoice_id","FK","str"],["amount",null,"int"],["currency",null,"str"]],fkTo:["CUSTOMER","INVOICE"]},
+  {id:"INVOICE_LINE_ITEM",s:"partial",p:"P3",d:"Billing",tickets:["RD-816998","RD-1030045"],api:"/v1/invoices/:id/lines",
+   cols:[["id","PK","str"],["invoice_id","FK","str"],["price_id","FK","str"],["amount",null,"int"],["quantity",null,"int"],["type",null,"str"]],fkTo:["INVOICE","PRICE"]},
+  {id:"INVOICE_PAYMENT",s:"supported",p:"done",d:"Billing",tickets:["RD-1170126"],api:"/v1/invoice_payments",
+   cols:[["id","PK","str"],["invoice_id","FK","str"],["payment_intent_id","FK","str"],["amount_paid",null,"int"],["status",null,"str"]],fkTo:["INVOICE","PAYMENT_INTENT"]},
+  {id:"CREDIT_NOTE",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/credit_notes",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["invoice_id","FK","str"],["amount",null,"int"],["status",null,"str"]],fkTo:["CUSTOMER","INVOICE"]},
+  {id:"CREDIT_GRANT",s:"missing",p:"P2",d:"Billing",tickets:["RD-1221679"],api:"/v1/billing/credit_grants",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["expires_at",null,"ts"]],fkTo:["CUSTOMER"]},
+  {id:"CREDIT_BALANCE_TRANSACTION",s:"missing",p:"P3",d:"Billing",tickets:[],api:"/v1/billing/credit_balance_transactions",
+   cols:[["id","PK","str"],["credit_grant_id","FK","str"],["customer_id","FK","str"],["amount",null,"int"],["type",null,"str"]],fkTo:["CREDIT_GRANT","CUSTOMER"]},
+  {id:"METER",s:"supported",p:"done",d:"Billing",tickets:["RD-957572"],api:"/v1/billing/meters",
+   cols:[["id","PK","str"],["display_name",null,"str"],["event_name",null,"str"],["status",null,"str"]],fkTo:[]},
+  {id:"METER_EVENT_SUMMARY",s:"partial",p:"P2",d:"Billing",tickets:["RD-1211907"],api:"/v1/billing/meters/:id/event_summaries",
+   cols:[["id","PK","str"],["meter_id","FK","str"],["aggregated_value",null,"dec"],["end_time",null,"ts"],["start_time",null,"ts"]],fkTo:["METER"]},
+  {id:"CUSTOMER_BALANCE_TRANSACTION",s:"supported",p:"done",d:"Billing",tickets:[],api:"/v1/customers/:id/balance_transactions",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["type",null,"str"]],fkTo:["CUSTOMER"]},
+
+  // CAPITAL
+  {id:"FINANCING_OFFER",s:"missing",p:"P3",d:"Capital",tickets:["RD-1204614"],api:"/v1/capital/financing_offers",
+   cols:[["id","PK","str"],["account_id","FK","str"],["offered_amount",null,"int"],["status",null,"str"],["withhold_rate",null,"dec"]],fkTo:["ACCOUNT"]},
+  {id:"FINANCING_SUMMARY",s:"missing",p:"P4",d:"Capital",tickets:["RD-1204614"],api:"/v1/capital/financing_summary",
+   cols:[["account_id","PK","str"],["currency",null,"str"],["outstanding",null,"int"],["paid_to_date",null,"int"]],fkTo:["ACCOUNT"]},
+
+  // CONNECT
+  {id:"ACCOUNT",s:"partial",p:"P2",d:"Connect",tickets:["RD-867439"],api:"/v1/accounts",
+   cols:[["id","PK","str"],["business_type",null,"str"],["country",null,"str"],["email",null,"str"],["type",null,"str"]],fkTo:[]},
+  {id:"APPLICATION_FEE",s:"supported",p:"done",d:"Connect",tickets:[],api:"/v1/application_fees",
+   cols:[["id","PK","str"],["account_id","FK","str"],["charge_id","FK","str"],["amount",null,"int"],["currency",null,"str"]],fkTo:["ACCOUNT","CHARGE"]},
+  {id:"FEE_REFUND",s:"supported",p:"done",d:"Connect",tickets:[],api:"/v1/application_fees/:id/refunds",
+   cols:[["id","PK","str"],["fee_id","FK","str"],["amount",null,"int"],["currency",null,"str"]],fkTo:["APPLICATION_FEE"]},
+  {id:"CAPABILITY",s:"supported",p:"done",d:"Connect",tickets:["RD-1166372"],api:"/v1/accounts/:id/capabilities",
+   cols:[["account_id","PK,FK","str"],["id","PK","str"],["requirements_*",null,"str"],["status",null,"str"]],fkTo:["ACCOUNT"]},
+  {id:"PERSON",s:"supported",p:"done",d:"Connect",tickets:[],api:"/v1/accounts/:id/persons",
+   cols:[["id","PK","str"],["account_id","FK","str"],["email",null,"str"],["first_name",null,"str"],["last_name",null,"str"],["relationship_*",null,"str"]],fkTo:["ACCOUNT"]},
+  {id:"TOPUP",s:"supported",p:"done",d:"Connect",tickets:[],api:"/v1/topups",
+   cols:[["id","PK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"],["created",null,"ts"]],fkTo:[]},
+  {id:"TRANSFER",s:"supported",p:"done",d:"Connect",tickets:[],api:"/v1/transfers",
+   cols:[["id","PK","str"],["destination_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["created",null,"ts"]],fkTo:["ACCOUNT"]},
+  {id:"TRANSFER_REVERSAL",s:"supported",p:"done",d:"Connect",tickets:[],api:"/v1/transfers/:id/reversals",
+   cols:[["id","PK","str"],["transfer_id","FK","str"],["amount",null,"int"],["currency",null,"str"]],fkTo:["TRANSFER"]},
+
+  // RADAR
+  {id:"EARLY_FRAUD_WARNING",s:"supported",p:"P3",d:"Radar",tickets:["RD-1077782"],api:"/v1/radar/early_fraud_warnings",
+   cols:[["id","PK","str"],["charge_id","FK","str"],["payment_intent_id","FK","str"],["actionable",null,"bool"],["fraud_type",null,"str"]],fkTo:["CHARGE","PAYMENT_INTENT"]},
+  {id:"REVIEW",s:"supported",p:"done",d:"Radar",tickets:[],api:"/v1/reviews",
+   cols:[["id","PK","str"],["charge_id","FK","str"],["payment_intent_id","FK","str"],["reason",null,"str"]],fkTo:["CHARGE","PAYMENT_INTENT"]},
+  {id:"VALUE_LIST",s:"missing",p:"P2",d:"Radar",tickets:[],api:"/v1/radar/value_lists",
+   cols:[["id","PK","str"],["alias",null,"str"],["item_type",null,"str"],["name",null,"str"]],fkTo:[]},
+  {id:"VALUE_LIST_ITEM",s:"missing",p:"P2",d:"Radar",tickets:[],api:"/v1/radar/value_list_items",
+   cols:[["id","PK","str"],["value_list_id","FK","str"],["created",null,"ts"],["value",null,"str"]],fkTo:["VALUE_LIST"]},
+
+  // ISSUING
+  {id:"ISSUING_CARDHOLDER",s:"supported",p:"done",d:"Issuing",tickets:[],api:"/v1/issuing/cardholders",
+   cols:[["id","PK","str"],["email",null,"str"],["name",null,"str"],["status",null,"str"],["type",null,"str"]],fkTo:[]},
+  {id:"ISSUING_CARD",s:"supported",p:"done",d:"Issuing",tickets:[],api:"/v1/issuing/cards",
+   cols:[["id","PK","str"],["cardholder_id","FK","str"],["currency",null,"str"],["last4",null,"str"],["status",null,"str"]],fkTo:["ISSUING_CARDHOLDER"]},
+  {id:"ISSUING_DISPUTE",s:"partial",p:"P3",d:"Issuing",tickets:["RD-1217436"],api:"/v1/issuing/disputes",
+   cols:[["id","PK","str"],["transaction_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["ISSUING_TRANSACTION"]},
+  {id:"ISSUING_TRANSACTION",s:"partial",p:"P3",d:"Issuing",tickets:["RD-1217435"],api:"/v1/issuing/transactions",
+   cols:[["id","PK","str"],["card_id","FK","str"],["cardholder_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["type",null,"str"]],fkTo:["ISSUING_CARD","ISSUING_CARDHOLDER"]},
+  {id:"ISSUING_PROGRAM",s:"missing",p:"P3",d:"Issuing",tickets:["RD-1193404"],api:"/v1/issuing/programs",
+   cols:[["id","PK","str"],["name",null,"str"],["status",null,"str"]],fkTo:[]},
+
+  // TERMINAL
+  {id:"TERMINAL_LOCATION",s:"missing",p:"P3",d:"Terminal",tickets:[],api:"/v1/terminal/locations",
+   cols:[["id","PK","str"],["display_name",null,"str"],["address_*",null,"str"]],fkTo:[]},
+  {id:"TERMINAL_READER",s:"missing",p:"P3",d:"Terminal",tickets:[],api:"/v1/terminal/readers",
+   cols:[["id","PK","str"],["location_id","FK","str"],["device_type",null,"str"],["label",null,"str"],["status",null,"str"]],fkTo:["TERMINAL_LOCATION"]},
+  {id:"TERMINAL_HARDWARE_ORDER",s:"missing",p:"P3",d:"Terminal",tickets:["RD-612747"],api:"/v1/terminal/hardware_orders",
+   cols:[["id","PK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"],["created",null,"ts"]],fkTo:[]},
+
+  // TREASURY
+  {id:"TREASURY_FINANCIAL_ACCOUNT",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/financial_accounts",
+   cols:[["id","PK","str"],["account_id","FK","str"],["currency",null,"str"],["features_*",null,"str"],["status",null,"str"]],fkTo:["ACCOUNT"]},
+  {id:"TREASURY_TRANSACTION",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/transactions",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["flow_type",null,"str"]],fkTo:["TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_TRANSACTION_ENTRY",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/transaction_entries",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["transaction_id","FK","str"],["amount",null,"int"],["type",null,"str"]],fkTo:["TREASURY_TRANSACTION","TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_OUTBOUND_TRANSFER",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/outbound_transfers",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_OUTBOUND_PAYMENT",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/outbound_payments",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_INBOUND_TRANSFER",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/inbound_transfers",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["status",null,"str"]],fkTo:["TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_RECEIVED_CREDIT",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/received_credits",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["amount",null,"int"],["network",null,"str"]],fkTo:["TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_RECEIVED_DEBIT",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/received_debits",
+   cols:[["id","PK","str"],["financial_account_id","FK","str"],["amount",null,"int"],["network",null,"str"]],fkTo:["TREASURY_FINANCIAL_ACCOUNT"]},
+  {id:"TREASURY_CREDIT_REVERSAL",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/credit_reversals",
+   cols:[["id","PK","str"],["received_credit_id","FK","str"],["amount",null,"int"],["currency",null,"str"]],fkTo:["TREASURY_RECEIVED_CREDIT"]},
+  {id:"TREASURY_DEBIT_REVERSAL",s:"missing",p:"P2",d:"Treasury",tickets:["RD-519409"],api:"/v1/treasury/debit_reversals",
+   cols:[["id","PK","str"],["received_debit_id","FK","str"],["amount",null,"int"],["currency",null,"str"]],fkTo:["TREASURY_RECEIVED_DEBIT"]},
+
+  // ENTITLEMENTS
+  {id:"ENTITLEMENT_FEATURE",s:"missing",p:"P3",d:"Entitlements",tickets:[],api:"/v1/entitlements/features",
+   cols:[["id","PK","str"],["active",null,"bool"],["lookup_key",null,"str"],["name",null,"str"]],fkTo:[]},
+  {id:"PRODUCT_FEATURE",s:"missing",p:"P3",d:"Entitlements",tickets:[],api:"/v1/products/:id/features",
+   cols:[["id","PK","str"],["entitlement_feature_id","FK","str"],["product_id","FK","str"]],fkTo:["ENTITLEMENT_FEATURE","PRODUCT"]},
+  {id:"ACTIVE_ENTITLEMENT",s:"missing",p:"P3",d:"Entitlements",tickets:[],api:"/v1/entitlements/active_entitlements",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["feature_id","FK","str"],["lookup_key",null,"str"]],fkTo:["CUSTOMER","ENTITLEMENT_FEATURE"]},
+
+  // FINANCIAL CONNECTIONS
+  {id:"FC_ACCOUNT",s:"missing",p:"P2",d:"Financial Connections",tickets:[],api:"/v1/financial_connections/accounts",
+   cols:[["id","PK","str"],["display_name",null,"str"],["institution_name",null,"str"],["status",null,"str"],["subcategory",null,"str"]],fkTo:[]},
+  {id:"FC_ACCOUNT_OWNERSHIP",s:"missing",p:"P3",d:"Financial Connections",tickets:[],api:"/v1/financial_connections/accounts/:id/owners",
+   cols:[["account_id","PK,FK","str"],["index","PK","int"],["email",null,"str"],["name",null,"str"]],fkTo:["FC_ACCOUNT"]},
+  {id:"FC_TRANSACTION",s:"missing",p:"P2",d:"Financial Connections",tickets:[],api:"/v1/financial_connections/transactions",
+   cols:[["id","PK","str"],["account_id","FK","str"],["amount",null,"int"],["currency",null,"str"],["description",null,"str"],["transacted_at",null,"ts"]],fkTo:["FC_ACCOUNT"]},
+
+  // TAX
+  {id:"TAX_REGISTRATION",s:"missing",p:"P1",d:"Tax",tickets:["RD-1191812"],api:"/v1/tax/registrations",
+   cols:[["id","PK","str"],["active_from",null,"ts"],["country",null,"str"],["status",null,"str"]],fkTo:[]},
+  {id:"TAX_SETTINGS",s:"missing",p:"P4",d:"Tax",tickets:["RD-1191812"],api:"/v1/tax/settings",
+   cols:[["id","PK","str"],["defaults_tax_behavior",null,"str"],["head_office_*",null,"str"]],fkTo:[]},
+  {id:"TAX_TRANSACTION",s:"missing",p:"P1",d:"Tax",tickets:["RD-1191812"],api:"/v1/tax/transactions",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["currency",null,"str"],["reference",null,"str"],["type",null,"str"]],fkTo:["CUSTOMER"]},
+  {id:"TAX_TRANSACTION_LINE_ITEM",s:"missing",p:"P1",d:"Tax",tickets:["RD-1191812"],api:"/v1/tax/transactions/:id/line_items",
+   cols:[["id","PK","str"],["transaction_id","FK","str"],["amount",null,"int"],["amount_tax",null,"int"],["product_id","FK","str"]],fkTo:["TAX_TRANSACTION","PRODUCT"]},
+  {id:"TAX_CALCULATION",s:"missing",p:"P1",d:"Tax",tickets:["RD-1191812"],api:"/v1/tax/calculations",
+   cols:[["id","PK","str"],["customer_id","FK","str"],["currency",null,"str"],["tax_amount_exclusive",null,"int"],["tax_amount_inclusive",null,"int"]],fkTo:["CUSTOMER"]},
+  {id:"TAX_CALCULATION_LINE_ITEM",s:"missing",p:"P1",d:"Tax",tickets:["RD-1191812"],api:"/v1/tax/calculations/:id/line_items",
+   cols:[["id","PK","str"],["tax_calculation_id","FK","str"],["amount",null,"int"],["amount_tax",null,"int"],["product_id","FK","str"]],fkTo:["TAX_CALCULATION","PRODUCT"]},
+];
+
+// Build reverse FK map
+const fkFrom={};
+T.forEach(t=>t.fkTo.forEach(target=>{(fkFrom[target]=fkFrom[target]||[]).push(t.id);}));
+
+// State
+const AF={status:new Set(["supported","partial","missing"]),priority:new Set(["done","P1","P2","P3","P4","P5"])};
+let ADomains=new Set(Object.keys(DC));
+let focused=null,searchQ="";
+
+// Stripe API doc URL builder
+function docUrl(api){
+  const path=api.replace(/\/v1\//,"").replace(/\/:id\/.*/,"").replace(/_/g,"-");
+  return `https://stripe.com/docs/api/${path}`;
+}
+
+// Render domain filter pills
+function renderDomainPills(){
+  const row=document.getElementById("drow");
+  Object.keys(DC).sort((a,b)=>DC[a].order-DC[b].order).forEach(d=>{
+    const cnt=T.filter(t=>t.d===d).length;
+    const pill=document.createElement("div");
+    pill.className="pill on d-pill";
+    pill.dataset.ft="domain";pill.dataset.fv=d;
+    pill.style.borderLeftColor=DC[d].color;
+    pill.textContent=`${d} (${cnt})`;
+    row.appendChild(pill);
+  });
+}
+
+// Build card HTML
+function mkCard(t){
+  const color=DC[t.d].color;
+  const pl=t.p==="done"?"✓":t.p;
+  const pCls=t.p.toLowerCase();
+  const fTo=t.fkTo||[];
+  const fFrom=fkFrom[t.id]||[];
+
+  const colRows=t.cols.map(([n,k,ty])=>{
+    const kc=k?(k.includes(",")?"pkfk":k.toLowerCase()):"";
+    return `<div class="crow"><span class="ckey ${kc}">${k||""}</span><span class="ccolname">${n}</span><span class="ctype">${ty}</span></div>`;
+  }).join("")+"<div class='csep'></div>";
+
+  const toChips=fTo.length?fTo.map(id=>`<span class="fkchip" data-jump="${id}">${id}</span>`).join(""):`<span class="fknone">none</span>`;
+  const fromChips=fFrom.length?fFrom.map(id=>`<span class="fkchip" data-jump="${id}">${id}</span>`).join(""):`<span class="fknone">none</span>`;
+
+  const jiraLinks=t.tickets.map(tk=>`<a href="https://fivetran.atlassian.net/browse/${tk}" class="lbtn jira" target="_blank">${tk}</a>`).join("");
+
+  const el=document.createElement("div");
+  el.className="tcard";el.id=`c-${t.id}`;
+  el.dataset.s=t.s;el.dataset.p=t.p;el.dataset.d=t.d;el.dataset.tid=t.id;
+  el.innerHTML=`
+    <div class="ctop">
+      <span class="cdot ${t.s}"></span>
+      <span class="cname">${t.id}</span>
+      <span class="pbadge ${pCls}">${pl}</span>
+    </div>
+    <div class="cpath" title="${t.api}">${t.api}</div>
+    <div class="clinx">
+      <a href="${docUrl(t.api)}" class="lbtn api" target="_blank">API ↗</a>
+      ${jiraLinks}
+    </div>
+    <div class="ccols">${colRows}</div>
+    <div class="cfkinfo">
+      <div class="fkrow"><span class="fkdir">→ refs</span><div class="fkchips">${toChips}</div></div>
+      <div class="fkrow"><span class="fkdir">← used by</span><div class="fkchips">${fromChips}</div></div>
+    </div>`;
+
+  // Click header = expand + focus FK
+  el.querySelector(".ctop").addEventListener("click",e=>{e.stopPropagation();focusCard(t.id);});
+  el.querySelectorAll("a").forEach(a=>a.addEventListener("click",e=>e.stopPropagation()));
+  el.querySelectorAll(".fkchip").forEach(chip=>chip.addEventListener("click",e=>{
+    e.stopPropagation();
+    const tid=chip.dataset.jump;
+    const target=document.getElementById(`c-${tid}`);
+    if(target){target.scrollIntoView({behavior:"smooth",block:"center"});flash(target);}
+  }));
+  return el;
+}
+
+function flash(el){
+  el.style.outline="2px solid #6366f1";
+  setTimeout(()=>el.style.outline="",700);
+}
+
+// Render all domain sections
+function renderDomains(){
+  const main=document.getElementById("main");
+  main.innerHTML="";
+  Object.keys(DC).sort((a,b)=>DC[a].order-DC[b].order).forEach(d=>{
+    const tables=T.filter(t=>t.d===d);
+    const netNew=tables.filter(t=>t.s==="missing").length;
+    const color=DC[d].color;
+    const sec=document.createElement("div");
+    sec.className="dsec";sec.dataset.d=d;
+    sec.innerHTML=`<div class="dhdr">
+      <div class="dbar" style="background:${color}"></div>
+      <span class="dname">${d}</span>
+      <span class="dcnt" id="cnt-${d.replace(/\s+/g,'_')}">${tables.length} tables</span>
+      ${netNew>0?`<span class="dnn">${netNew} net-new</span>`:""}
+      <span class="dchev">▲</span>
+    </div>`;
+    const cards=document.createElement("div");
+    cards.className="dcards";cards.id=`cards-${d.replace(/\s+/g,'_')}`;
+    tables.forEach(t=>cards.appendChild(mkCard(t)));
+    sec.querySelector(".dhdr").addEventListener("click",()=>sec.classList.toggle("collapsed"));
+    sec.appendChild(cards);
+    main.appendChild(sec);
+  });
+}
+
+// Focus a table: expand it, highlight FK relations, draw lines
+function focusCard(tid){
+  if(focused===tid){
+    // Unfocus
+    focused=null;
+    document.querySelectorAll(".tcard").forEach(c=>c.classList.remove("expanded","focused","fk-out","fk-in","dimmed"));
+    clearLines();
+    return;
+  }
+  focused=tid;
+  const t=T.find(t=>t.id===tid);
+  const related=new Set([...(t.fkTo||[]),...(fkFrom[tid]||[])]);
+  document.querySelectorAll(".tcard").forEach(c=>{
+    const cid=c.dataset.tid;
+    c.classList.remove("expanded","focused","fk-out","fk-in","dimmed");
+    if(cid===tid){c.classList.add("expanded","focused");}
+    else if((t.fkTo||[]).includes(cid)){c.classList.add("fk-out");}
+    else if((fkFrom[tid]||[]).includes(cid)){c.classList.add("fk-in");}
+    else if(!related.has(cid)){c.classList.add("dimmed");}
+  });
+  drawLines(tid,t.fkTo,fkFrom[tid]);
+}
+
+// FK line drawing
+const svg=document.getElementById("fksvg");
+function clearLines(){while(svg.firstChild)svg.removeChild(svg.firstChild);}
+function drawLines(srcId,outs,ins){
+  clearLines();
+  const srcEl=document.getElementById(`c-${srcId}`);
+  if(!srcEl)return;
+  const drawLine=(from,to,color,dash)=>{
+    if(!from||!to)return;
+    const fr=from.getBoundingClientRect(),tr=to.getBoundingClientRect();
+    const x1=fr.left+fr.width/2,y1=fr.top+fr.height/2;
+    const x2=tr.left+tr.width/2,y2=tr.top+tr.height/2;
+    const dx=Math.max(Math.abs(x2-x1)*0.45,80);
+    const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.setAttribute("d",`M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);
+    p.setAttribute("stroke",color);p.setAttribute("stroke-width","1.8");
+    p.setAttribute("fill","none");p.setAttribute("opacity","0.65");
+    if(dash)p.setAttribute("stroke-dasharray","5,3");
+    // arrowhead
+    const ang=Math.atan2(y2-y1,x2-x1);
+    const ax=x2-9*Math.cos(ang),ay=y2-9*Math.sin(ang);
+    const ar=document.createElementNS("http://www.w3.org/2000/svg","path");
+    ar.setAttribute("d",`M${x2},${y2} L${ax-4*Math.sin(ang)},${ay+4*Math.cos(ang)} L${ax+4*Math.sin(ang)},${ay-4*Math.cos(ang)}Z`);
+    ar.setAttribute("fill",color);ar.setAttribute("opacity","0.65");
+    svg.appendChild(p);svg.appendChild(ar);
+  };
+  (outs||[]).forEach(oid=>drawLine(srcEl,document.getElementById(`c-${oid}`),"#0d9488",false));
+  (ins||[]).forEach(iid=>drawLine(document.getElementById(`c-${iid}`),srcEl,"#7c3aed",true));
+}
+
+// Redraw lines on scroll
+let stimer;
+window.addEventListener("scroll",()=>{
+  if(!focused)return;
+  clearTimeout(stimer);
+  stimer=setTimeout(()=>{
+    const t=T.find(t=>t.id===focused);
+    drawLines(focused,t.fkTo,fkFrom[focused]);
+  },60);
+},{passive:true});
+
+// Click backdrop to unfocus
+document.addEventListener("click",e=>{
+  if(focused&&!e.target.closest(".tcard"))focusCard(focused);
+});
+
+// ESC to unfocus
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&focused)focusCard(focused);});
+
+// Filters
+function applyFilters(){
+  const q=searchQ.toLowerCase();
+  let vis=0,ns=0,np=0,nm=0;
+  T.forEach(t=>{
+    const el=document.getElementById(`c-${t.id}`);
+    if(!el)return;
+    const ok=AF.status.has(t.s)&&AF.priority.has(t.p)&&ADomains.has(t.d)&&
+      (!q||t.id.toLowerCase().includes(q)||t.api.toLowerCase().includes(q)||t.tickets.some(tk=>tk.toLowerCase().includes(q)));
+    el.classList.toggle("hidden",!ok);
+    if(ok){vis++;if(t.s==="supported")ns++;else if(t.s==="partial")np++;else nm++;}
+  });
+  // Update domain sections
+  Object.keys(DC).forEach(d=>{
+    const key=d.replace(/\s+/g,'_');
+    const sec=document.querySelector(`.dsec[data-d="${d}"]`);
+    if(!sec)return;
+    const v=T.filter(t=>t.d===d&&!document.getElementById(`c-${t.id}`)?.classList.contains("hidden")).length;
+    const cnt=document.getElementById(`cnt-${key}`);
+    if(cnt)cnt.textContent=`${v} tables`;
+    sec.classList.toggle("hidden",v===0);
+  });
+  document.getElementById("fcnt").textContent=`${vis} / ${T.length}`;
+  document.getElementById("ns").textContent=ns;
+  document.getElementById("np").textContent=np;
+  document.getElementById("nm").textContent=nm;
+  document.getElementById("nt").textContent=vis;
+}
+
+// Pill clicks
+document.addEventListener("click",e=>{
+  const pill=e.target.closest(".pill[data-ft]");
+  if(!pill)return;
+  e.stopPropagation();
+  const ft=pill.dataset.ft,fv=pill.dataset.fv;
+  if(ft==="status"){
+    if(AF.status.has(fv)){AF.status.delete(fv);pill.classList.remove("on");}
+    else{AF.status.add(fv);pill.classList.add("on");}
+  } else if(ft==="priority"){
+    if(AF.priority.has(fv)){AF.priority.delete(fv);pill.classList.remove("on");}
+    else{AF.priority.add(fv);pill.classList.add("on");}
+  } else if(ft==="domain"){
+    if(ADomains.has(fv)){ADomains.delete(fv);pill.classList.remove("on");}
+    else{ADomains.add(fv);pill.classList.add("on");}
+  }
+  applyFilters();
+});
+
+// Search
+document.getElementById("srch").addEventListener("input",e=>{searchQ=e.target.value;applyFilters();});
+
+// Init
+renderDomainPills();
+renderDomains();
+applyFilters();
+</script>
+</body>
+</html>
